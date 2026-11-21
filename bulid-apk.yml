@@ -1,0 +1,49 @@
+name: Build HOK APK
+on:
+  push:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unzip project
+        run: unzip -q -o ./*.zip
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+          build-root-directory: HOK-Ranked-Android
+
+      - name: Build APKs
+        working-directory: HOK-Ranked-Android
+        run: gradle assembleArm32Release assembleArm64Release assembleUniversalRelease --no-daemon --stacktrace
+
+      - name: Collect APKs
+        working-directory: HOK-Ranked-Android
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/arm32/release/*.apk dist/HOK-32bit.apk
+          cp app/build/outputs/apk/arm64/release/*.apk dist/HOK-64bit.apk
+          cp app/build/outputs/apk/universal/release/*.apk dist/HOK-universal-32-64bit.apk
+          cd dist && zip -r ../HOK-Ranked-APKs.zip .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HOK-APKs-zip
+          path: HOK-Ranked-Android/HOK-Ranked-APKs.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HOK-APKs
+          path: HOK-Ranked-Android/dist/*.apk
